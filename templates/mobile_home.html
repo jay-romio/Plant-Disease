@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Disease Recognition</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    <style>
+        .mobile-container {
+            max-width: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        .upload-area {
+            border: 3px dashed #007bff;
+            border-radius: 15px;
+            padding: 40px 20px;
+            text-align: center;
+            background: #f8f9fa;
+            margin: 20px;
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover {
+            background: #e9ecef;
+            border-color: #0056b3;
+        }
+        .upload-icon {
+            font-size: 3rem;
+            color: #007bff;
+            margin-bottom: 15px;
+        }
+        .result-card {
+            margin: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .disease-name {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 15px 15px 0 0;
+            text-align: center;
+        }
+        .hindi-text {
+            font-family: 'Mangal', 'Devanagari Sans', sans-serif;
+            color: #495057;
+            font-weight: 500;
+            margin-top: 8px;
+            font-size: 1.05rem;
+            line-height: 1.7;
+        }
+        .confidence-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin: 5px;
+        }
+        .info-section {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #007bff;
+        }
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-container">
+        <!-- Header -->
+        <div class="bg-primary text-white p-3">
+            <h1 class="text-center mb-0">Plant Disease Recognition</h1>
+            <p class="text-center mb-0">Identify plant diseases instantly with AI</p>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="container-fluid p-3">
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                <div class="upload-icon">+ Upload Image</div>
+                <h4>Tap to select plant image</h4>
+                <p class="text-muted">Choose from gallery or take a photo</p>
+                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+            </div>
+
+            <!-- Image Preview -->
+            <div id="imagePreview" style="display: none;">
+                <img id="previewImg" class="preview-image mx-auto d-block" alt="Preview">
+                <button onclick="analyzeImage()" class="btn btn-success btn-lg w-100 mt-3">
+                    Analyze Disease
+                </button>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div class="loading-spinner" id="loadingSpinner">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Analyzing...</span>
+                </div>
+                <p class="mt-2">Analyzing plant disease...</p>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results" style="display: none;">
+                <div class="result-card">
+                    <div class="disease-name">
+                        <h3 id="diseaseName"></h3>
+                        <h4 class="hindi-text" id="diseaseNameHindi"></h4>
+                    </div>
+                    
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <span class="confidence-badge bg-info" id="confidenceBadge"></span>
+                            <span class="confidence-badge" id="severityBadge"></span>
+                        </div>
+
+                        <div class="info-section">
+                            <h5>Cause / kaaran:</h5>
+                            <p id="cause"></p>
+                            <p class="hindi-text" id="causeHindi"></p>
+                        </div>
+
+                        <div class="info-section">
+                            <h5>Symptoms / lakshan:</h5>
+                            <p id="symptoms"></p>
+                            <p class="hindi-text" id="symptomsHindi"></p>
+                        </div>
+
+                        <div class="info-section">
+                            <h5>Treatment / ilaaj:</h5>
+                            <p id="cure"></p>
+                            <p class="hindi-text" id="cureHindi"></p>
+                        </div>
+
+                        <div class="info-section">
+                            <h5>Prevention / rokaav:</h5>
+                            <p id="prevention"></p>
+                            <p class="hindi-text" id="preventionHindi"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="resetApp()" class="btn btn-secondary btn-lg w-100 mt-3">
+                    Analyze Another Image
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+
+        // File input handler
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                selectedFile = file;
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    document.getElementById('previewImg').src = e.target.result;
+                    document.getElementById('imagePreview').style.display = 'block';
+                };
+                
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Analyze image
+        function analyzeImage() {
+            if (!selectedFile) {
+                alert('Please select an image first');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('imagePreview').style.display = 'none';
+            document.getElementById('results').style.display = 'none';
+
+            // Create form data
+            const formData = new FormData();
+            formData.append('image', selectedFile);
+
+            // Send to server
+            fetch('/api/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayResults(data.prediction);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error analyzing image. Please try again.');
+            })
+            .finally(() => {
+                document.getElementById('loadingSpinner').style.display = 'none';
+            });
+        }
+
+        // Display results
+        function displayResults(prediction) {
+            document.getElementById('diseaseName').textContent = prediction.name;
+            document.getElementById('diseaseNameHindi').textContent = prediction.name_hindi;
+            document.getElementById('confidenceBadge').textContent = `Confidence: ${prediction.confidence.toFixed(1)}%`;
+            
+            // Set severity badge
+            const severityBadge = document.getElementById('severityBadge');
+            severityBadge.textContent = `Severity: ${prediction.severity} / ${prediction.severity_hindi}`;
+            severityBadge.className = 'confidence-badge';
+            
+            if (prediction.severity === 'Severe') {
+                severityBadge.classList.add('bg-danger');
+            } else if (prediction.severity === 'Moderate') {
+                severityBadge.classList.add('bg-warning');
+            } else {
+                severityBadge.classList.add('bg-success');
+            }
+
+            document.getElementById('cause').textContent = prediction.cause;
+            document.getElementById('causeHindi').textContent = prediction.cause_hindi;
+            document.getElementById('symptoms').textContent = prediction.symptoms;
+            document.getElementById('symptomsHindi').textContent = prediction.symptoms_hindi;
+            document.getElementById('cure').textContent = prediction.cure;
+            document.getElementById('cureHindi').textContent = prediction.cure_hindi;
+            document.getElementById('prevention').textContent = prediction.prevention;
+            document.getElementById('preventionHindi').textContent = prediction.prevention_hindi;
+
+            document.getElementById('results').style.display = 'block';
+        }
+
+        // Reset app
+        function resetApp() {
+            document.getElementById('fileInput').value = '';
+            document.getElementById('imagePreview').style.display = 'none';
+            document.getElementById('results').style.display = 'none';
+            selectedFile = null;
+        }
+    </script>
+</body>
+</html>
